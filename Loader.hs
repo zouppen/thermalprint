@@ -4,8 +4,6 @@ module Loader (loadMonochrome) where
 import Codec.Picture
 import Codec.Picture.Types
 import Data.Array.Unboxed
-import qualified Data.ByteString as B
-import Data.Functor
 
 type MonochromeImage = UArray (Int,Int) Bool
 
