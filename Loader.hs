@@ -1,4 +1,5 @@
-module Loader where
+-- |Load monochrome image. Supported formats: PNG and BMP.
+module Loader (loadMonochrome) where
 
 import Codec.Picture
 import Codec.Picture.Types
@@ -6,10 +7,16 @@ import Data.Array.Unboxed
 import qualified Data.ByteString as B
 import Data.Functor
 
--- |Converts decodeImage output to array of booleans
+type MonochromeImage = UArray (Int,Int) Bool
+
+-- |Loads monochrome image from file to an array of booleans.
+loadMonochrome :: FilePath -> IO MonochromeImage
+loadMonochrome path = readImage path >>= toMonochrome
+
+-- |Converts decodeImage output to array of booleans.
 toMonochrome :: Monad m
              => Either String DynamicImage
-             -> m (UArray (Int,Int) Bool)
+             -> m MonochromeImage
 toMonochrome img = case img of
   Left m -> fail $ "Unsupported image format: " ++ m
   Right (ImageY8 x) -> monochromatic x
