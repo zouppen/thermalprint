@@ -2,9 +2,14 @@ module Loader where
 
 import Codec.Picture
 import Codec.Picture.Types
+import Data.Array.Unboxed
 import qualified Data.ByteString as B
+import Data.Functor
 
-toMonochrome :: Monad m => Either String DynamicImage -> m [[Bool]]
+-- |Converts decodeImage output to array of booleans
+toMonochrome :: Monad m
+             => Either String DynamicImage
+             -> m (UArray (Int,Int) Bool)
 toMonochrome img = case img of
   Left m -> fail $ "Unsupported image format: " ++ m
   Right (ImageY8 x) -> monochromatic x
@@ -13,11 +18,13 @@ toMonochrome img = case img of
   Right (ImageRGBA8 x) -> monochromatic x
   Right (ImageYCbCr8 _) -> fail "YCbCr8 colorspace is not supported"
 
-monochromatic img = mapM row [0..imageHeight img - 1]
+monochromatic img = do
+  xs <- mapM isBlack $ range geometry
+  return $ listArray geometry xs
   where
-    row y = mapM (isBlack y) [0..imageWidth img - 1]
-    isBlack y x = case promotePixel (pixelAt img x y) of
-          PixelRGBA8 0 0 0 255 -> return False
-          PixelRGBA8 255 255 255 255 -> return True
+    geometry = ((0,0), (imageHeight img-1, imageWidth img-1))
+    isBlack (y,x) = case promotePixel (pixelAt img x y) of
+          PixelRGBA8 0 0 0 255 -> return True
+          PixelRGBA8 255 255 255 255 -> return False
           _ -> fail $ "Pixel not monochrome at position " ++
                show (x,y)
