@@ -7,26 +7,29 @@ import System.Posix.IO
 import System.Posix.Types
 import Data.ByteString.Lazy (ByteString, hPut)
 
-foreign import ccall "init_serial_port" init_serial_port :: CInt -> CInt -> IO CInt
+foreign import ccall "init_serial_port" init_serial_port :: CInt -> CInt -> CInt -> IO CInt
 foreign import ccall "tcdrain" tcdrain :: CInt -> IO CInt
 
 -- |Opens serial port for output in raw 8-bit mode using given speed
 -- and returns functions for closing and writing to the port. It
 -- supports even the non-standard bit rates like 250000 bps. In raw
 -- 8-bit mode the output is not altered by the operating system.
-openSerialOutRaw :: FilePath -> Int -> IO (IO (), ByteString -> IO ())
-openSerialOutRaw file speed = do
-  Fd fd <- openFd file WriteOnly Nothing OpenFileFlags{ append    = False
+openSerialOutRaw :: FilePath -> Int -> Bool -> IO (IO (), ByteString -> IO ())
+openSerialOutRaw file speed xonXoff = do
+  Fd fd <- openFd file ReadWrite Nothing OpenFileFlags{ append    = False
                                                       , exclusive = False
                                                       , noctty    = True
                                                       , nonBlock  = False
                                                       , trunc     = False
                                                       }
   throwErrnoIfMinus1Retry_ "Unable to configure serial port" $
-    init_serial_port fd (fromIntegral speed)
+    init_serial_port fd (fromIntegral speed) (cBool xonXoff)
 
   h <- fdToHandle $ Fd fd
   return (hClose h, \bs -> hPut h bs >> hFlush h >> drainSerial fd)
+  where
+    cBool True = 1
+    cBool False = 0
 
 -- |Drain serial port buffers, including hardware buffer. This
 -- supports retrying if interrupted, unlike `drainOutput` in
