@@ -1,9 +1,10 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, RecordWildCards #-}
 module Main where
 
 import Data.Binary.Put
+import qualified Data.ByteString.Lazy as B
 import System.Environment
-import qualified Data.ByteString.Lazy as B -- TMP
+import System.IO
 
 import EscPos
 import Serial
@@ -11,8 +12,9 @@ import Loader
 
 main = do
   [printerDev, imagePath] <- getArgs
-  (close, write) <- openSerialOutRaw printerDev 19200
+  Serial{..} <- openSerialOutRaw printerDev 19200
   image <- loadMonochrome imagePath
-  write $ runPut $ putImage image
-  write "\n\n\n"
-  return ()
+  B.hPut handle $ runPut $ putImage image
+  B.hPut handle "\n\n\n"
+  drain
+  hClose handle
