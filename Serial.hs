@@ -20,7 +20,7 @@ foreign import ccall "tcdrain" tcdrain :: CInt -> IO CInt
 -- 8-bit mode the output is not altered by the operating system.
 openSerialOutRaw :: FilePath -> Int -> IO Serial
 openSerialOutRaw file speed = do
-  Fd fd <- openFd file WriteOnly Nothing OpenFileFlags{ append    = False
+  Fd fd <- openFd file ReadWrite Nothing OpenFileFlags{ append    = False
                                                       , exclusive = False
                                                       , noctty    = True
                                                       , nonBlock  = False
