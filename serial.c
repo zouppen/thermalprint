@@ -68,8 +68,8 @@ int init_serial_port(int fd, int speed)
 
 	// Start with raw values
 	struct termios term;
-	term.c_cflag = speed_preset | CS8 | CLOCAL | CREAD;
 	cfmakeraw(&term);
+	term.c_cflag = speed_preset | CLOCAL | CREAD;
 	if (tcsetattr(fd,TCSANOW,&term) == -1) return -1;
 
 	return 0;
