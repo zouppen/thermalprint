@@ -4,8 +4,7 @@ module Loader (loadMonochrome) where
 import Codec.Picture
 import Codec.Picture.Types
 import Data.Array.Unboxed
-
-type MonochromeImage = UArray (Int,Int) Bool
+import Common
 
 -- |Loads monochrome image from file to an array of booleans.
 loadMonochrome :: FilePath -> IO MonochromeImage
