@@ -75,6 +75,9 @@ int init_serial_port(int fd, int speed)
 	return 0;
 }
 
+int tcflow_off(int fd) { return tcflow(fd, TCOOFF); }
+int tcflow_on(int fd) { return tcflow(fd, TCOON); }
+
 /**
  * Converts integer to baud rate. If no suitable preset is found,
  * return B0.

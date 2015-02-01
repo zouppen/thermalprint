@@ -1,18 +1,21 @@
-{-# LANGUAGE ForeignFunctionInterface #-}
+{-# LANGUAGE ForeignFunctionInterface, RecordWildCards #-}
 module Serial (Serial(..), openSerialOutRaw) where
 
 import Foreign.C
 import System.IO
 import System.Posix.IO
 import System.Posix.Types
-import Data.ByteString.Lazy (ByteString, hPut)
 
 data Serial = Serial { handle :: Handle
                      , drain  :: IO ()
+                     , pause  :: IO ()
+                     , resume :: IO ()
                      }
 
-foreign import ccall "init_serial_port" init_serial_port :: CInt -> CInt -> IO CInt
-foreign import ccall "tcdrain" tcdrain :: CInt -> IO CInt
+foreign import ccall unsafe "init_serial_port" init_serial_port :: CInt -> CInt -> IO CInt
+foreign import ccall unsafe "tcdrain" tcdrain :: CInt -> IO CInt
+foreign import ccall unsafe "tcflow_off" tcflow_off :: CInt -> IO CInt
+foreign import ccall unsafe "tcflow_on" tcflow_on :: CInt -> IO CInt
 
 -- |Opens serial port for output in raw 8-bit mode using given speed
 -- and returns functions for closing and writing to the port. It
@@ -29,8 +32,12 @@ openSerialOutRaw file speed = do
   throwErrnoIfMinus1Retry_ "Unable to configure serial port" $
     init_serial_port fd (fromIntegral speed)
 
-  h <- fdToHandle $ Fd fd
-  return $ Serial h $ hFlush h >> drainSerial fd
+  handle <- fdToHandle $ Fd fd
+  return Serial{ drain = hFlush handle >> drainSerial fd
+               , pause = throwErrnoIfMinus1Retry_ "Unable to pause" $ tcflow_off fd
+               , resume = throwErrnoIfMinus1Retry_ "Unable to resume" $ tcflow_on fd
+               , ..
+               }
 
 -- |Drain serial port buffers, including hardware buffer. This
 -- supports retrying if interrupted, unlike `drainOutput` in
