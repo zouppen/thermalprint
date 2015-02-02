@@ -6,7 +6,10 @@ PNG=`mktemp --suffix .png`
 while true; do
     echo -n 'Sivu >'
     read P
-    if curl http://www.yle.fi/tekstitv/images/P${P}_01.gif | convert - -crop +10+0 -geometry 384x -monochrome -negate -rotate 180 $PNG; then
+    if curl http://www.yle.fi/tekstitv/images/P${P}_01.gif |
+	convert - -crop +10+0 -geometry 384x -negate \
+	    -threshold 45% -rotate 180 $PNG
+    then
 	./Main $1 $PNG
     else
 	echo Sivua ei löydy.
