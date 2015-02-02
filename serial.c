@@ -40,7 +40,7 @@ static tcflag_t to_speed(const int speed);
  * underlying hardware is capable. If it fails, -1 is returned and
  * errno is set. Otherwise, zero is returned.
  */
-int init_serial_port(int fd, int speed)
+int init_serial_port(int fd, int speed, int handshake)
 {
 	// Check if speed preset is found or do we need to set a custom speed
 	tcflag_t speed_preset = to_speed(speed);
@@ -70,6 +70,9 @@ int init_serial_port(int fd, int speed)
 	struct termios term;
 	cfmakeraw(&term);
 	term.c_cflag = speed_preset | CLOCAL | CREAD;
+	if (handshake == 1) term.c_cflag |= CRTSCTS;
+	else if (handshake == 2) term.c_iflag |= IXON;
+
 	if (tcsetattr(fd,TCSANOW,&term) == -1) return -1;
 
 	return 0;

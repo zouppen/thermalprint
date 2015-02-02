@@ -1,5 +1,7 @@
 {-# LANGUAGE ForeignFunctionInterface, RecordWildCards #-}
-module Serial (Serial(..), openSerialOutRaw) where
+module Serial ( Serial(..)
+              , Handshake(..)
+              , openSerialOutRaw) where
 
 import Foreign.C
 import System.IO
@@ -12,7 +14,10 @@ data Serial = Serial { handle :: Handle
                      , resume :: IO ()
                      }
 
-foreign import ccall unsafe "init_serial_port" init_serial_port :: CInt -> CInt -> IO CInt
+data Handshake = NoHandshake | RtsCts | XonXoff deriving (Enum)
+
+foreign import ccall unsafe "init_serial_port" init_serial_port
+  :: CInt -> CInt -> CInt -> IO CInt
 foreign import ccall unsafe "tcdrain" tcdrain :: CInt -> IO CInt
 foreign import ccall unsafe "tcflow_off" tcflow_off :: CInt -> IO CInt
 foreign import ccall unsafe "tcflow_on" tcflow_on :: CInt -> IO CInt
@@ -21,8 +26,8 @@ foreign import ccall unsafe "tcflow_on" tcflow_on :: CInt -> IO CInt
 -- and returns functions for closing and writing to the port. It
 -- supports even the non-standard bit rates like 250000 bps. In raw
 -- 8-bit mode the output is not altered by the operating system.
-openSerialOutRaw :: FilePath -> Int -> IO Serial
-openSerialOutRaw file speed = do
+openSerialOutRaw :: FilePath -> Int -> Handshake -> IO Serial
+openSerialOutRaw file speed handshake = do
   Fd fd <- openFd file ReadWrite Nothing OpenFileFlags{ append    = False
                                                       , exclusive = False
                                                       , noctty    = True
@@ -30,12 +35,14 @@ openSerialOutRaw file speed = do
                                                       , trunc     = False
                                                       }
   throwErrnoIfMinus1Retry_ "Unable to configure serial port" $
-    init_serial_port fd (fromIntegral speed)
+    init_serial_port fd (fromIntegral speed) (fromIntegral $ fromEnum handshake)
 
   handle <- fdToHandle $ Fd fd
   return Serial{ drain = hFlush handle >> drainSerial fd
-               , pause = throwErrnoIfMinus1Retry_ "Unable to pause" $ tcflow_off fd
-               , resume = throwErrnoIfMinus1Retry_ "Unable to resume" $ tcflow_on fd
+               , pause = throwErrnoIfMinus1Retry_ "Unable to pause" $
+                         tcflow_off fd
+               , resume = throwErrnoIfMinus1Retry_ "Unable to resume" $
+                          tcflow_on fd
                , ..
                }
 
